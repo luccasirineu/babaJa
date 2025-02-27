@@ -14,7 +14,6 @@ app = Flask(__name__)
 CORS(app, origins=["*"])
 
 
-# Configuração do banco de dados MySQL
 db_config = {
     'host': '137.184.82.206',
     'user': 'user_admin',
@@ -34,7 +33,6 @@ def signup():
     role = data.get('user-role-signup')
 
     print(f'Username: {username}, Password: {password}, Role: {role}')
-    # Verifique se as senhas coincidem
     if password != confirm_password:
         return jsonify({"error": "As senhas não coincidem"}), 400
 
@@ -50,11 +48,9 @@ def login():
     password = data.get("password")
     role = data.get("user_role")
 
-    # Conexão com o banco de dados
     connection = mysql.connector.connect(**db_config)
     cursor = connection.cursor(dictionary=True)
 
-    # Verifica se o usuário existe no banco e traz as informações necessárias
     query = "SELECT * FROM users WHERE username = %s AND role = %s"
     cursor.execute(query, (username, role))
     user = cursor.fetchone()
@@ -65,18 +61,13 @@ def login():
     if not user:
         return jsonify({"error": "Usuário não encontrado"}), 404
 
-    # Verifica se o hash da senha corresponde e se o papel (role) está correto
     if check_password_hash(user['password'], password) and user['role'] == role:
         if role == "baba":
-            # Verifica se a idade está nula no banco
             if user.get('idade') is None:
-                # Idade está nula, redireciona para a página de confirmação de dados
                 return jsonify({"message": "Confirme seus dados", "redirect": "confirmacao", "username": user['username']}), 200
             else:
-                # Idade está preenchida, redireciona para o dashboard da babá
                 return jsonify({"message": "Login realizado com sucesso", "redirect": "dashboard", "username": user['username']}), 200
         elif role == "pais":
-            # Redireciona pais para a página correta
             return jsonify({"message": "Login realizado com sucesso", "username": user['username']}), 200
     else:
         return jsonify({"error": "Usuário ou senha incorretos"}), 401
@@ -94,7 +85,6 @@ def get_babas():
 
     babas = cursor.fetchall()
 
-    # Fechar conexão e cursor
     cursor.close()
     connection.close()
 
@@ -102,13 +92,11 @@ def get_babas():
 
 @app.route('/api/search_babas', methods=['GET'])
 def search_babas():
-    name = request.args.get('name', '')  # Obtém o nome a partir dos parâmetros de consulta
+    name = request.args.get('name', '') 
 
-    # Conectar ao banco de dados
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
 
-    # Consulta para buscar babás com nome semelhante ao fornecido
     query = """
         SELECT username as nome, idade, experiencia, estado, cidade, descricao, preco_hora, foto_url, num_celular, email
         FROM users
@@ -117,11 +105,9 @@ def search_babas():
     cursor.execute(query, (f"%{name}%",))
     babas = cursor.fetchall()
 
-    # Fechar a conexão e o cursor
     cursor.close()
     connection.close()
 
-    # Retorna a lista de babás que correspondem ao nome pesquisado ou uma lista vazia
     return jsonify(babas), 200
 
 
@@ -159,7 +145,6 @@ def update_baba():
     connection = None
     cursor = None
     try:
-        # Receber os dados como FormData
         data = request.form
 
         username = data.get('username')
@@ -172,11 +157,9 @@ def update_baba():
         num_celular = data.get('num_celular')
         email = data.get('email')
 
-        # Conectar ao banco de dados
         connection = mysql.connector.connect(**db_config)
         cursor = connection.cursor()
 
-        # Atualizar os dados da babá no banco de dados
         update_query = """
         UPDATE users
         SET idade = %s, experiencia = %s, estado = %s, cidade = %s, descricao = %s, preco_hora = %s, num_celular = %s, email = %s
@@ -185,14 +168,12 @@ def update_baba():
         cursor.execute(update_query,
                        (idade, experiencia, estado, cidade, descricao, preco, num_celular, email, username))
 
-        # Commitar a transação
         connection.commit()
 
     except mysql.connector.Error as err:
         print(f"Erro ao atualizar os dados: {err}")
         return jsonify({"error": f"Erro ao atualizar os dados: {err}"}), 500
     finally:
-        # Fechar a conexão e o cursor, se foram criados
         if cursor is not None:
             cursor.close()
         if connection is not None:
@@ -203,7 +184,6 @@ def update_baba():
 
 
 
-# Testes para visualizar todos os usuários
 @app.route('/users', methods=['GET'])
 def get_users():
     users = User.get_all_users()
